@@ -27,6 +27,20 @@ button{
 .add-button:hover{
   background-color: hsl(125, 47%, 44%);
 }
+.add-button:disabled{
+  background-color: hsl(125, 47%, 34%);
+  cursor: not-allowed;
+}
+.delete-all-button{
+  background-color: hsl(10, 90%, 40%);
+}
+.delete-all-button:hover{
+  background-color: hsl(10, 90%, 30%);
+}
+.delete-all-button:disabled{
+  background-color: hsl(10, 90%, 30%);
+  cursor: not-allowed;
+}
 .delete-button{
   background-color: hsl(10, 90%, 50%);
 }
@@ -35,6 +49,10 @@ button{
 }
 .move-button{
   background-color: hsl(207, 90%, 64%);
+}
+.move-button:disabled{
+  background-color: hsl(207, 90%, 54%);
+  cursor: not-allowed;
 }
 .move-button:hover{
   background-color: hsl(207, 90%, 54%);
