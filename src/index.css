@@ -23,6 +23,7 @@ button{
 }
 .add-button{
   background-color: hsl(125, 47%, 54%);
+  margin-left: 10px;
 }
 .add-button:hover{
   background-color: hsl(125, 47%, 44%);
@@ -33,6 +34,7 @@ button{
 }
 .delete-all-button{
   background-color: hsl(10, 90%, 40%);
+  margin-left: 10px;
 }
 .delete-all-button:hover{
   background-color: hsl(10, 90%, 30%);
@@ -41,6 +43,18 @@ button{
   background-color: hsl(10, 90%, 30%);
   cursor: not-allowed;
 }
+.delete-selected-button{
+  background-color: hsl(10, 90%, 60%);
+  margin-left: 10px;
+}
+.delete-selected-button:hover{
+  background-color: hsl(10, 90%, 50%);
+}
+.delete-selected-button:disabled{
+  background-color: hsl(10, 90%, 50%);
+  cursor: not-allowed;
+}
+
 .delete-button{
   background-color: hsl(10, 90%, 50%);
 }
@@ -86,3 +100,9 @@ li{
   font-size: 1.4rem;
   margin-left: 10px;
 }
+input[type='checkbox'] {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
+

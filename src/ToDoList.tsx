@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+type Task = {
+  text: string;
+  checked: boolean;
+};
 
 export default function ToDoList() {
-  const [tasks, setTasks] = useState<string[]>([
-    "Eat breakfast",
-    "Go shower",
-    "Walk the dog",
+  const [tasks, setTasks] = useState<Task[]>([
+    { text: "Eat breakfast", checked: false },
+    { text: "Go shower", checked: false },
+    { text: "Walk the dog", checked: false },
   ]);
   const [newTask, setNewTask] = useState<string>("");
 
@@ -14,13 +19,24 @@ export default function ToDoList() {
 
   function addTask() {
     if (newTask.trim() !== "") {
-      setTasks((t) => [newTask, ...t]);
+      setTasks((t) => [{ text: newTask, checked: false }, ...t]);
       setNewTask("");
     }
   }
 
   function deleteAllTasks() {
     setTasks([]);
+  }
+
+  function deleteSelectedTasks() {
+    const updatedTasks = tasks.filter((task) => !task.checked);
+    setTasks(updatedTasks);
+  }
+
+  function toggleTaskChecked(index: number) {
+    const updatedTasks = [...tasks];
+    updatedTasks[index].checked = !updatedTasks[index].checked;
+    setTasks(updatedTasks);
   }
 
   function deleteTask(index: number) {
@@ -50,6 +66,10 @@ export default function ToDoList() {
     }
   }
 
+  const numberOfCheckedTasks = useMemo(() => {
+    return tasks.filter((task) => task.checked).length;
+  }, [tasks]);
+
   return (
     <div className="to-do-list">
       <h1>To-Do-List</h1>
@@ -71,9 +91,23 @@ export default function ToDoList() {
         >
           Add
         </button>
-        <button className="delete-all-button" onClick={deleteAllTasks} disabled={tasks.length === 0}>
-          Delete All
-        </button>
+        {numberOfCheckedTasks > 0 && (
+          <>
+            <button
+              className="delete-all-button"
+              onClick={deleteAllTasks}
+              disabled={tasks.length === 0}
+            >
+              Delete All
+            </button>
+            <button
+              className="delete-selected-button"
+              onClick={deleteSelectedTasks}
+            >
+              {`Delete Selected (${numberOfCheckedTasks})`}
+            </button>
+          </>
+        )}
       </div>
       {tasks.length > 0 ? (
         <ol>
@@ -87,6 +121,7 @@ export default function ToDoList() {
               onMoveUp={moveTaskUp}
               isFirst={index === 0}
               isLast={index === tasks.length - 1}
+              onToggleChecked={toggleTaskChecked}
             />
           ))}
         </ol>
@@ -98,13 +133,14 @@ export default function ToDoList() {
 }
 
 interface ToDoListItemProps {
-  task: string;
+  task: Task;
   index: number;
   isFirst?: boolean;
   isLast?: boolean;
   onDelete: (index: number) => void;
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
+  onToggleChecked: (index: number) => void;
 }
 
 function ToDoListItem({
@@ -115,10 +151,18 @@ function ToDoListItem({
   onMoveDown,
   isFirst,
   isLast,
+  onToggleChecked,
 }: ToDoListItemProps) {
   return (
-    <li key={index}>
-      <span className="text">{task}</span>
+    <li>
+      <label>
+        <input
+          type="checkbox"
+          checked={task.checked}
+          onChange={() => onToggleChecked(index)}
+        />
+      </label>
+      <span className="text">{task.text}</span>
       <button className="delete-button" onClick={() => onDelete(index)}>
         Delete
       </button>
