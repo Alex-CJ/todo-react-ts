@@ -1,84 +1,234 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { UsersDropdown } from "./UsersDropdown";
+import type { ApiUsersType } from "./types";
 
 type Task = {
+  userId: number;
+  id: number;
   text: string;
   checked: boolean;
 };
 
+type APITask = {
+  userId: number;
+  id: number;
+  title: string;
+  completed: boolean;
+};
+
+function transformAPITaskToTask(apiTask: APITask): Task {
+  return {
+    userId: apiTask.userId,
+    id: apiTask.id,
+    text: apiTask.title,
+    checked: apiTask.completed,
+  };
+}
+
 export default function ToDoList() {
   const [tasks, setTasks] = useState<Task[]>([
+    /*
     { text: "Eat breakfast", checked: false },
     { text: "Go shower", checked: false },
     { text: "Walk the dog", checked: false },
+  */
   ]);
-  const [newTask, setNewTask] = useState<string>("");
+  // const [defaultTasks, setDefaultTasks] = useState<Task[]>();
+  const [filteredTasksByUser, setFilteredTasksByUser] = useState<Task[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [selectedUser, setSelectedUser] = useState<ApiUsersType["id"] | null>(
+    null
+  );
+
+  const tasksToDisplay = selectedUser ? filteredTasksByUser : tasks;
+
+  // useEffect(() => {
+  //   fetch("https://jsonplaceholder.typicode.com/users/1/todos")
+  //     .then((res) => {
+  //       return res.json();
+  //     })
+  //     .then((data) => {
+  //       const defaultUserTasks = data.map(transformAPITaskToTask);
+  //       setTasks(defaultUserTasks);
+  //       // setFilteredTasksByUser(defaultUserTasks);
+  //     });
+  // }, []);
+
+  useEffect(() => {
+    if (!selectedUser) return;
+
+    fetch(`https://jsonplaceholder.typicode.com/users/${selectedUser}/todos`)
+      .then((res) => {
+        return res.json();
+      })
+      .then((data) => {
+        const defaultUserTasks = data.map(transformAPITaskToTask);
+        setTasks(defaultUserTasks);
+        setFilteredTasksByUser(defaultUserTasks);
+        console.log(defaultUserTasks);
+        // setFilteredTasksByUser(defaultUserTasks);
+      });
+  }, [selectedUser]);
+
+  // useEffect(() => {
+  //   fetch("https://jsonplaceholder.typicode.com/todos", {
+  //     method: "POST",
+  //     body: JSON.stringify({
+  //       title: "foo",
+  //       completed: false,
+  //       userId: 1,
+  //     }),
+  //     headers: {
+  //       "Content-type": "application/json; charset=UTF-8",
+  //     },
+  //   })
+  //     .then((response) => response.json())
+  //     .then((json) => console.log(json));
+  // }, []);
+
+  // const usersIds = useMemo(() => {
+  //   return Array.from(new Set(tasks.map((task) => task.userId)));
+  // }, [tasks]);
+
+  // const findUserTasks = useCallback(
+  //   (id: number) => {
+  //     const identifyUser = [...tasks].filter(
+  //       (item: Task) => item.userId === id
+  //     );
+  //     setFilteredTasksByUser(identifyUser);
+  //   },
+  //   [tasks]
+  // );
 
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
-    setNewTask(event.target.value);
+    setInputValue(event.target.value);
   }
 
-  function addTask() {
-    if (newTask.trim() !== "") {
-      setTasks((t) => [{ text: newTask, checked: false }, ...t]);
-      setNewTask("");
+  const updateSetTasks = useCallback(
+    (updater: Task[] | ((updater: Task[]) => Task[])) => {
+      if (selectedUser) {
+        setFilteredTasksByUser(updater);
+      } else {
+        setTasks(updater);
+      }
+    },
+    [selectedUser]
+  );
+
+  const addTask = useCallback(() => {
+    if (inputValue.trim() !== "") {
+      updateSetTasks((prevTasks) => [
+        {
+          userId: selectedUser ?? 1,
+          id: prevTasks.length + 1,
+          text: inputValue,
+          checked: false,
+        },
+        ...prevTasks,
+      ]);
+
+      setInputValue("");
+
+      // if (selectedUser) {
+      //   setFilteredTasksByUser((t) => [
+      //     {
+      //       userId: 1,
+      //       id: tasksToDisplay.length + 1,
+      //       text: inputValue,
+      //       checked: false,
+      //     },
+      //     ...t,
+      //   ]);
+      //   setInputValue("");
+      // } else {
+      //   setTasks((t) => [
+      //     {
+      //       userId: 1,
+      //       id: tasksToDisplay.length + 1,
+      //       text: inputValue,
+      //       checked: false,
+      //     },
+      //     ...t,
+      //   ]);
+      //   setInputValue("");
+      // }
     }
-  }
+  }, [selectedUser, inputValue, updateSetTasks]);
 
-  function deleteAllTasks() {
-    setTasks([]);
-  }
+  const deleteAllTasks = useCallback(() => {
+    updateSetTasks([]);
+    setInputValue("");
+  }, [updateSetTasks]);
 
-  function deleteSelectedTasks() {
-    const updatedTasks = tasks.filter((task) => !task.checked);
-    setTasks(updatedTasks);
-  }
+  const deleteSelectedTasks = useCallback(() => {
+    const updatedTasks = tasksToDisplay.filter((task) => !task.checked);
+    updateSetTasks(updatedTasks);
+  }, [updateSetTasks, tasksToDisplay]);
 
-  function toggleTaskChecked(index: number) {
-    const updatedTasks = [...tasks];
-    updatedTasks[index].checked = !updatedTasks[index].checked;
-    setTasks(updatedTasks);
-  }
+  const toggleTaskChecked = useCallback(
+    (index: number) => {
+      const updatedTasks = [...tasksToDisplay];
+      updatedTasks[index].checked = !updatedTasks[index].checked;
+      updateSetTasks(updatedTasks);
+    },
+    [tasksToDisplay, updateSetTasks]
+  );
 
-  function deleteTask(index: number) {
-    const updatedTasks = tasks.filter((_, i) => i !== index);
-    setTasks(updatedTasks);
-  }
+  const deleteTask = useCallback(
+    (index: number) => {
+      const updatedTasks = tasksToDisplay.filter((_, i) => i !== index);
+      setFilteredTasksByUser(updatedTasks);
+      updateSetTasks(updatedTasks);
+    },
+    [updateSetTasks, tasksToDisplay]
+  );
 
-  function moveTaskUp(index: number) {
-    if (index > 0) {
-      const updatedTasks = [...tasks];
-      [updatedTasks[index], updatedTasks[index - 1]] = [
-        updatedTasks[index - 1],
-        updatedTasks[index],
-      ];
-      setTasks(updatedTasks);
-    }
-  }
+  const moveTaskUp = useCallback(
+    (index: number) => {
+      if (index > 0) {
+        const updatedTasks = [...tasksToDisplay];
+        [updatedTasks[index], updatedTasks[index - 1]] = [
+          updatedTasks[index - 1],
+          updatedTasks[index],
+        ];
+        updateSetTasks(updatedTasks);
+      }
+    },
+    [updateSetTasks, tasksToDisplay]
+  );
 
-  function moveTaskDown(index: number) {
-    if (index < tasks.length - 1) {
-      const updatedTasks = [...tasks];
-      [updatedTasks[index], updatedTasks[index + 1]] = [
-        updatedTasks[index + 1],
-        updatedTasks[index],
-      ];
-      setTasks(updatedTasks);
-    }
-  }
+  const moveTaskDown = useCallback(
+    (index: number) => {
+      if (index < tasksToDisplay.length - 1) {
+        const updatedTasks = [...tasksToDisplay];
+        [updatedTasks[index], updatedTasks[index + 1]] = [
+          updatedTasks[index + 1],
+          updatedTasks[index],
+        ];
+        updateSetTasks(updatedTasks);
+      }
+    },
+    [updateSetTasks, tasksToDisplay]
+  );
 
   const numberOfCheckedTasks = useMemo(() => {
-    return tasks.filter((task) => task.checked).length;
-  }, [tasks]);
+    return tasksToDisplay.filter((task) => task.checked).length;
+  }, [tasksToDisplay]);
 
   return (
     <div className="to-do-list">
+      <UsersDropdown
+        selectedUser={selectedUser}
+        onUserChange={setSelectedUser}
+      />
+
       <h1>To-Do-List</h1>
 
       <div>
         <input
           type="text"
           placeholder="Enter a task..."
-          value={newTask}
+          value={inputValue}
           onChange={handleInputChange}
           onKeyDown={(e) => {
             if (e.key === "Enter") addTask();
@@ -87,7 +237,7 @@ export default function ToDoList() {
         <button
           className="add-button"
           onClick={addTask}
-          disabled={!newTask.trim()}
+          disabled={!inputValue.trim()}
         >
           Add
         </button>
@@ -96,7 +246,7 @@ export default function ToDoList() {
             <button
               className="delete-all-button"
               onClick={deleteAllTasks}
-              disabled={tasks.length === 0}
+              disabled={tasksToDisplay.length === 0}
             >
               Delete All
             </button>
@@ -109,9 +259,9 @@ export default function ToDoList() {
           </>
         )}
       </div>
-      {tasks.length > 0 ? (
+      {tasksToDisplay.length > 0 ? (
         <ol>
-          {tasks.map((task, index) => (
+          {tasksToDisplay.map((task, index) => (
             <ToDoListItem
               key={index}
               task={task}
@@ -120,7 +270,7 @@ export default function ToDoList() {
               onMoveDown={moveTaskDown}
               onMoveUp={moveTaskUp}
               isFirst={index === 0}
-              isLast={index === tasks.length - 1}
+              isLast={index === tasksToDisplay.length - 1}
               onToggleChecked={toggleTaskChecked}
             />
           ))}
