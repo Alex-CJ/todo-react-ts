@@ -21,3 +21,28 @@ export interface ApiUsersType {
     bs: string;
   };
 }
+
+export interface UsersType {
+  id: number;
+  name: string;
+}
+
+export interface UsersDropdownProps {
+  selectedUser: ApiUsersType["id"] | null;
+  onUserChange: (userId: ApiUsersType["id"] | null) => void;
+}
+
+export interface Task {
+  userId: number;
+  id: number;
+  text: string;
+  checked: boolean;
+};
+
+export interface APITask {
+  userId: number;
+  id: number;
+  title: string;
+  completed: boolean;
+};
+

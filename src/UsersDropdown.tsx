@@ -1,71 +1,56 @@
-import { useCallback, useEffect, useState } from "react";
-import type { ApiUsersType } from "./types";
+import { memo, useCallback, useEffect, useState } from "react";
+import type { UsersType, UsersDropdownProps } from "./types";
+import { transformAPIUserToUser } from "./transforms";
 
-interface UsersDropdownProps {
-  selectedUser: ApiUsersType["id"] | null;
-  onUserChange: (userId: ApiUsersType["id"] | null) => void;
-}
+export const UsersDropdown = memo(
+  ({ selectedUser, onUserChange }: UsersDropdownProps) => {
+    const [users, setUsers] = useState<UsersType[]>([]);
 
-interface usersType {
-  id: number;
-  name: string;
-}
+    const handleUserChange = useCallback(
+      (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const userId = parseInt(event.target.value, 10);
 
-function transformAPIUserToUser(apiUser: ApiUsersType): usersType {
-  return {
-    id: apiUser.id,
-    name: apiUser.name,
-  };
-}
+        if (isNaN(userId)) {
+          onUserChange(null);
+          setUsers([]);
+          return;
+        }
 
-export const UsersDropdown = ({
-  selectedUser,
-  onUserChange,
-}: UsersDropdownProps) => {
-  const [users, setUsers] = useState<usersType[]>([]);
+        onUserChange(userId);
+      },
+      [onUserChange]
+    );
 
-  const handleUserChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      const userId = parseInt(event.target.value, 10);
+    useEffect(() => {
+      if (users.length > 0) return;
 
-      if (isNaN(userId)) {
-        onUserChange(null);
-        setUsers([]);
-        return;
-      }
+      fetch("https://jsonplaceholder.typicode.com/users")
+        .then((res) => {
+          return res.json();
+        })
+        .then((data) => {
+          const allUsers = data.map(transformAPIUserToUser);
+          setUsers(allUsers);
+          onUserChange(allUsers[0]?.id || null);
+          console.log(allUsers);
+        });
+    }, [onUserChange, users.length]);
 
-      onUserChange(userId);
-    },
-    [onUserChange]
-  );
-
-  useEffect(() => {
-    fetch("https://jsonplaceholder.typicode.com/users")
-      .then((res) => {
-        return res.json();
-      })
-      .then((data) => {
-        const allUsers = data.map(transformAPIUserToUser);
-        setUsers(allUsers);
-        onUserChange(allUsers[0]?.id || null);
-        console.log(allUsers);
-      });
-  }, [onUserChange]);
-
-  return (
-    <header className="header">
-      <h3>Select User</h3>
-      <select
-        id="user-select"
-        value={selectedUser === null ? undefined : selectedUser}
-        onChange={handleUserChange}
-      >
-        {users.map((user) => (
-          <option key={user.id} value={user.id}>
-            User: {user.name}
-          </option>
-        ))}
-      </select>
-    </header>
-  );
-};
+    return (
+      <header className="header">
+        <h3>Select User</h3>
+        <select
+          id="user-select"
+          value={selectedUser === null ? undefined : selectedUser}
+          onChange={handleUserChange}
+        >
+          {users.map((user) => (
+            <option key={user.id} value={user.id}>
+              User: {user.name}
+            </option>
+          ))}
+        </select>
+      </header>
+    );
+  }
+);

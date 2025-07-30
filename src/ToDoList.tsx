@@ -1,58 +1,15 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { UsersDropdown } from "./UsersDropdown";
-import type { ApiUsersType } from "./types";
-
-type Task = {
-  userId: number;
-  id: number;
-  text: string;
-  checked: boolean;
-};
-
-type APITask = {
-  userId: number;
-  id: number;
-  title: string;
-  completed: boolean;
-};
-
-function transformAPITaskToTask(apiTask: APITask): Task {
-  return {
-    userId: apiTask.userId,
-    id: apiTask.id,
-    text: apiTask.title,
-    checked: apiTask.completed,
-  };
-}
+import type { ApiUsersType, Task } from "./types";
+import { transformAPITaskToTask } from "./transforms";
 
 export default function ToDoList() {
-  const [tasks, setTasks] = useState<Task[]>([
-    /*
-    { text: "Eat breakfast", checked: false },
-    { text: "Go shower", checked: false },
-    { text: "Walk the dog", checked: false },
-  */
-  ]);
-  // const [defaultTasks, setDefaultTasks] = useState<Task[]>();
-  const [filteredTasksByUser, setFilteredTasksByUser] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [selectedUser, setSelectedUser] = useState<ApiUsersType["id"] | null>(
     null
   );
-
-  const tasksToDisplay = selectedUser ? filteredTasksByUser : tasks;
-
-  // useEffect(() => {
-  //   fetch("https://jsonplaceholder.typicode.com/users/1/todos")
-  //     .then((res) => {
-  //       return res.json();
-  //     })
-  //     .then((data) => {
-  //       const defaultUserTasks = data.map(transformAPITaskToTask);
-  //       setTasks(defaultUserTasks);
-  //       // setFilteredTasksByUser(defaultUserTasks);
-  //     });
-  // }, []);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -64,162 +21,145 @@ export default function ToDoList() {
       .then((data) => {
         const defaultUserTasks = data.map(transformAPITaskToTask);
         setTasks(defaultUserTasks);
-        setFilteredTasksByUser(defaultUserTasks);
         console.log(defaultUserTasks);
-        // setFilteredTasksByUser(defaultUserTasks);
       });
   }, [selectedUser]);
 
-  // useEffect(() => {
-  //   fetch("https://jsonplaceholder.typicode.com/todos", {
-  //     method: "POST",
-  //     body: JSON.stringify({
-  //       title: "foo",
-  //       completed: false,
-  //       userId: 1,
-  //     }),
-  //     headers: {
-  //       "Content-type": "application/json; charset=UTF-8",
-  //     },
-  //   })
-  //     .then((response) => response.json())
-  //     .then((json) => console.log(json));
-  // }, []);
-
-  // const usersIds = useMemo(() => {
-  //   return Array.from(new Set(tasks.map((task) => task.userId)));
-  // }, [tasks]);
-
-  // const findUserTasks = useCallback(
-  //   (id: number) => {
-  //     const identifyUser = [...tasks].filter(
-  //       (item: Task) => item.userId === id
-  //     );
-  //     setFilteredTasksByUser(identifyUser);
-  //   },
-  //   [tasks]
-  // );
+  const handleSelectedUserChange = useCallback(
+    (userId: Parameters<typeof setSelectedUser>[0]) => {
+      setSelectedUser(userId);
+    },
+    []
+  );
 
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
     setInputValue(event.target.value);
   }
 
-  const updateSetTasks = useCallback(
-    (updater: Task[] | ((updater: Task[]) => Task[])) => {
-      if (selectedUser) {
-        setFilteredTasksByUser(updater);
-      } else {
-        setTasks(updater);
-      }
-    },
-    [selectedUser]
-  );
-
-  const addTask = useCallback(() => {
-    if (inputValue.trim() !== "") {
-      updateSetTasks((prevTasks) => [
+  const addTask = useCallback(async () => {
+    if (inputValue.trim() !== "" && selectedUser) {
+      setLoading(true);
+      const response = await fetch(
+        `https://jsonplaceholder.typicode.com/todos/${selectedUser}`,
         {
-          userId: selectedUser ?? 1,
-          id: prevTasks.length + 1,
-          text: inputValue,
-          checked: false,
-        },
-        ...prevTasks,
-      ]);
+          method: "PUT",
+          body: JSON.stringify({
+            id: tasks.length + 1,
+            title: "foo",
+            body: inputValue,
+            userId: selectedUser,
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        }
+      );
 
-      setInputValue("");
+      if (response.ok) {
+        setTasks((prevTasks) => [
+          {
+            userId: selectedUser ?? 1,
+            id: prevTasks.length + 1,
+            text: inputValue,
+            checked: false,
+          },
+          ...prevTasks,
+        ]);
 
-      // if (selectedUser) {
-      //   setFilteredTasksByUser((t) => [
-      //     {
-      //       userId: 1,
-      //       id: tasksToDisplay.length + 1,
-      //       text: inputValue,
-      //       checked: false,
-      //     },
-      //     ...t,
-      //   ]);
-      //   setInputValue("");
-      // } else {
-      //   setTasks((t) => [
-      //     {
-      //       userId: 1,
-      //       id: tasksToDisplay.length + 1,
-      //       text: inputValue,
-      //       checked: false,
-      //     },
-      //     ...t,
-      //   ]);
-      //   setInputValue("");
-      // }
+        setInputValue("");
+        setLoading(false);
+      }
     }
-  }, [selectedUser, inputValue, updateSetTasks]);
+  }, [inputValue, selectedUser, tasks.length]);
 
-  const deleteAllTasks = useCallback(() => {
-    updateSetTasks([]);
+  const deleteAllTasks = useCallback(async () => {
+    // const response = await fetch(
+    //   `https://jsonplaceholder.typicode.com/todos/1`,
+    //   {
+    //     method: "DELETE",
+    //   }
+    // );
+
+    // if (response.ok) {
+    // }
+    setTasks([]);
     setInputValue("");
-  }, [updateSetTasks]);
+  }, []);
 
-  const deleteSelectedTasks = useCallback(() => {
-    const updatedTasks = tasksToDisplay.filter((task) => !task.checked);
-    updateSetTasks(updatedTasks);
-  }, [updateSetTasks, tasksToDisplay]);
+  const deleteSelectedTasks = useCallback(async () => {
+    const updatedTasks = tasks.filter((task) => !task.checked);
+    setTasks(updatedTasks);
+  }, [tasks]);
 
   const toggleTaskChecked = useCallback(
     (index: number) => {
-      const updatedTasks = [...tasksToDisplay];
+      const updatedTasks = [...tasks];
       updatedTasks[index].checked = !updatedTasks[index].checked;
-      updateSetTasks(updatedTasks);
+      setTasks(updatedTasks);
     },
-    [tasksToDisplay, updateSetTasks]
+    [tasks]
   );
 
   const deleteTask = useCallback(
-    (index: number) => {
-      const updatedTasks = tasksToDisplay.filter((_, i) => i !== index);
-      setFilteredTasksByUser(updatedTasks);
-      updateSetTasks(updatedTasks);
+    async (index: number, taskId: Task["id"]) => {
+      try {
+        const response = await fetch(
+          `https://jsonplaceholder.typicode.com/todos/${taskId}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        if (response.ok) {
+          const updatedTasks = tasks.filter((_, i) => i !== index);
+          setTasks(updatedTasks);
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        throw new Error(errorMessage);
+      }
     },
-    [updateSetTasks, tasksToDisplay]
+    [tasks]
   );
 
   const moveTaskUp = useCallback(
     (index: number) => {
       if (index > 0) {
-        const updatedTasks = [...tasksToDisplay];
+        const updatedTasks = [...tasks];
         [updatedTasks[index], updatedTasks[index - 1]] = [
           updatedTasks[index - 1],
           updatedTasks[index],
         ];
-        updateSetTasks(updatedTasks);
+        setTasks(updatedTasks);
       }
     },
-    [updateSetTasks, tasksToDisplay]
+    [tasks]
   );
 
   const moveTaskDown = useCallback(
     (index: number) => {
-      if (index < tasksToDisplay.length - 1) {
-        const updatedTasks = [...tasksToDisplay];
+      if (index < tasks.length - 1) {
+        const updatedTasks = [...tasks];
         [updatedTasks[index], updatedTasks[index + 1]] = [
           updatedTasks[index + 1],
           updatedTasks[index],
         ];
-        updateSetTasks(updatedTasks);
+        setTasks(updatedTasks);
       }
     },
-    [updateSetTasks, tasksToDisplay]
+    [tasks]
   );
 
   const numberOfCheckedTasks = useMemo(() => {
-    return tasksToDisplay.filter((task) => task.checked).length;
-  }, [tasksToDisplay]);
+    return tasks.filter((task) => task.checked).length;
+  }, [tasks]);
 
   return (
     <div className="to-do-list">
       <UsersDropdown
         selectedUser={selectedUser}
-        onUserChange={setSelectedUser}
+        onUserChange={handleSelectedUserChange}
       />
 
       <h1>To-Do-List</h1>
@@ -237,19 +177,17 @@ export default function ToDoList() {
         <button
           className="add-button"
           onClick={addTask}
-          disabled={!inputValue.trim()}
+          disabled={!inputValue.trim() || loading}
         >
-          Add
+          {loading ? "Adding..." : "Add"}
         </button>
+        {tasks.length > 0 && (
+          <button className="delete-all-button" onClick={deleteAllTasks}>
+            Delete All
+          </button>
+        )}
         {numberOfCheckedTasks > 0 && (
           <>
-            <button
-              className="delete-all-button"
-              onClick={deleteAllTasks}
-              disabled={tasksToDisplay.length === 0}
-            >
-              Delete All
-            </button>
             <button
               className="delete-selected-button"
               onClick={deleteSelectedTasks}
@@ -259,9 +197,9 @@ export default function ToDoList() {
           </>
         )}
       </div>
-      {tasksToDisplay.length > 0 ? (
+      {tasks.length > 0 ? (
         <ol>
-          {tasksToDisplay.map((task, index) => (
+          {tasks.map((task, index) => (
             <ToDoListItem
               key={index}
               task={task}
@@ -270,7 +208,7 @@ export default function ToDoList() {
               onMoveDown={moveTaskDown}
               onMoveUp={moveTaskUp}
               isFirst={index === 0}
-              isLast={index === tasksToDisplay.length - 1}
+              isLast={index === tasks.length - 1}
               onToggleChecked={toggleTaskChecked}
             />
           ))}
@@ -287,7 +225,7 @@ interface ToDoListItemProps {
   index: number;
   isFirst?: boolean;
   isLast?: boolean;
-  onDelete: (index: number) => void;
+  onDelete: (index: number, taskId: Task["id"]) => Promise<void>;
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
   onToggleChecked: (index: number) => void;
@@ -303,6 +241,18 @@ function ToDoListItem({
   isLast,
   onToggleChecked,
 }: ToDoListItemProps) {
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = useCallback(async () => {
+    try {
+      setDeleting(true);
+      await onDelete(index, task.id);
+      setDeleting(false);
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+    }
+  }, [index, onDelete, task.id]);
+
   return (
     <li>
       <label>
@@ -313,8 +263,8 @@ function ToDoListItem({
         />
       </label>
       <span className="text">{task.text}</span>
-      <button className="delete-button" onClick={() => onDelete(index)}>
-        Delete
+      <button className="delete-button" onClick={handleDelete}>
+        {deleting ? "Deleting..." : "Delete"}
       </button>
       {isFirst && isLast ? null : (
         <>
