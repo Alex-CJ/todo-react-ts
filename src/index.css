@@ -106,3 +106,14 @@ input[type='checkbox'] {
   cursor: pointer;
 }
 
+.header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+h3 {
+  font-size: 1.8rem;
+  color: white;
+  margin-right: 20px;
+}
